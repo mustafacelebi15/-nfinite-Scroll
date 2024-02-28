@@ -1,118 +1,94 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import React from "react";
+import { SafeAreaView, Text, View, ActivityIndicator, FlatList} from "react-native";
+import axios from "axios";
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+export default class App extends React.Component {
+  constructor() {
+    super();
+    this.state = {
+      list: [],
+      page: 0,
+      limit: 2,
+      loading: false,
+      totalDataCount: 10,
+    };
+  }
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+  componentDidMount() {
+    this.getUserList();
+  }
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+  getUserList = () => {
+    const { list, page, limit, totalDataCount } = this.state;
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+    if (page >= totalDataCount) {
+      return;
+    }
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+    this.setState({ loading: true });
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+    axios.get(`https://jsonplaceholder.typicode.com/users?_start=${page}&_limit=${limit}`)
+      .then(res => {
+        this.setState({
+          list: page === 0 ? res.data : [...list, ...res.data],
+          loading: false
+        }, () => console.log(this.state));
+      })
+      .catch(error => {
+        console.error('Error fetching data:', error);
+        this.setState({ loading: false });
+      });
+  }
+
+  getMoreUserList = () => {
+    if (!this.state.loading) {
+      this.setState(
+        (prevState) => ({
+          page: prevState.page + 2,
+        }),
+        this.getUserList
+      );
+    }
   };
 
-  return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
+  footerIndicator = () => {
+    return this.state.loading ? (
+      <View
+        style={{
+          paddingVertical: 20,
+        }}
+      >
+        <ActivityIndicator animating size="large" />
+      </View>
+    ) : null;
+  };
+
+  render() {
+    return (
+      <SafeAreaView>
+        <FlatList
+          data={this.state.list}
+          renderItem={({ item }) => (
+            <ShowUsers item={item} />
+          )}
+          keyExtractor={item => item.id.toString()}
+          onEndReached={this.getMoreUserList}
+          ListFooterComponent={this.footerIndicator}
+          onEndReachedThreshold={0.1}
+        />
+      </SafeAreaView>
+    )
+  }
 }
 
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
-
-export default App;
+const ShowUsers = (props) => {
+  return (
+    <View style={{ padding: 40, borderBottomWidth: 1, borderBottomColor: 'black' }}>
+      <Text>{`ID: ${props.item.id}`}</Text>
+      <Text>{`Name: ${props.item.name}`}</Text>
+      <Text>{`Username: ${props.item.username}`}</Text>
+      <Text>{`Email: ${props.item.email}`}</Text>
+      <Text>{`Website: ${props.item.website}`}</Text>
+    </View>
+  )
+}
